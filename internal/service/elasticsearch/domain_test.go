@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -1337,6 +1338,15 @@ func testAccCheckESDomainDestroy(s *terraform.State) error {
 		}
 	}
 	return nil
+}
+
+func testAccGetValidStartAtTime(t *testing.T, timeUntilStart string) string {
+	n := time.Now().UTC()
+	d, err := time.ParseDuration(timeUntilStart)
+	if err != nil {
+		t.Fatalf("err parsing timeUntilStart: %s", err)
+	}
+	return n.Add(d).Format(time.RFC3339)
 }
 
 func testAccPreCheckIamServiceLinkedRoleEs(t *testing.T) {
