@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -375,6 +376,7 @@ func Provider() *schema.Provider {
 			"aws_cloudfront_function":                       cloudfront.DataSourceFunction(),
 			"aws_cloudfront_log_delivery_canonical_user_id": cloudfront.DataSourceLogDeliveryCanonicalUserID(),
 			"aws_cloudfront_origin_request_policy":          cloudfront.DataSourceOriginRequestPolicy(),
+			"aws_cloudfront_response_headers_policy":        cloudfront.DataSourceResponseHeadersPolicy(),
 
 			"aws_cloudhsm_v2_cluster": cloudhsmv2.DataSourceCluster(),
 
@@ -449,6 +451,7 @@ func Provider() *schema.Provider {
 			"aws_instance":                                   ec2.DataSourceInstance(),
 			"aws_instances":                                  ec2.DataSourceInstances(),
 			"aws_internet_gateway":                           ec2.DataSourceInternetGateway(),
+			"aws_key_pair":                                   ec2.DataSourceKeyPair(),
 			"aws_launch_template":                            ec2.DataSourceLaunchTemplate(),
 			"aws_nat_gateway":                                ec2.DataSourceNatGateway(),
 			"aws_network_acls":                               ec2.DataSourceNetworkACLs(),
@@ -842,15 +845,18 @@ func Provider() *schema.Provider {
 			"aws_cloudformation_stack_set_instance": cloudformation.ResourceStackSetInstance(),
 			"aws_cloudformation_type":               cloudformation.ResourceType(),
 
-			"aws_cloudfront_cache_policy":            cloudfront.ResourceCachePolicy(),
-			"aws_cloudfront_distribution":            cloudfront.ResourceDistribution(),
-			"aws_cloudfront_function":                cloudfront.ResourceFunction(),
-			"aws_cloudfront_key_group":               cloudfront.ResourceKeyGroup(),
-			"aws_cloudfront_monitoring_subscription": cloudfront.ResourceMonitoringSubscription(),
-			"aws_cloudfront_origin_access_identity":  cloudfront.ResourceOriginAccessIdentity(),
-			"aws_cloudfront_origin_request_policy":   cloudfront.ResourceOriginRequestPolicy(),
-			"aws_cloudfront_public_key":              cloudfront.ResourcePublicKey(),
-			"aws_cloudfront_realtime_log_config":     cloudfront.ResourceRealtimeLogConfig(),
+			"aws_cloudfront_cache_policy":                   cloudfront.ResourceCachePolicy(),
+			"aws_cloudfront_distribution":                   cloudfront.ResourceDistribution(),
+			"aws_cloudfront_field_level_encryption_config":  cloudfront.ResourceFieldLevelEncryptionConfig(),
+			"aws_cloudfront_field_level_encryption_profile": cloudfront.ResourceFieldLevelEncryptionProfile(),
+			"aws_cloudfront_function":                       cloudfront.ResourceFunction(),
+			"aws_cloudfront_key_group":                      cloudfront.ResourceKeyGroup(),
+			"aws_cloudfront_monitoring_subscription":        cloudfront.ResourceMonitoringSubscription(),
+			"aws_cloudfront_origin_access_identity":         cloudfront.ResourceOriginAccessIdentity(),
+			"aws_cloudfront_origin_request_policy":          cloudfront.ResourceOriginRequestPolicy(),
+			"aws_cloudfront_public_key":                     cloudfront.ResourcePublicKey(),
+			"aws_cloudfront_realtime_log_config":            cloudfront.ResourceRealtimeLogConfig(),
+			"aws_cloudfront_response_headers_policy":        cloudfront.ResourceResponseHeadersPolicy(),
 
 			"aws_cloudhsm_v2_cluster": cloudhsmv2.ResourceCluster(),
 			"aws_cloudhsm_v2_hsm":     cloudhsmv2.ResourceHSM(),
@@ -1826,8 +1832,17 @@ func providerConfigure(d *schema.ResourceData, terraformVersion string) (interfa
 
 	for _, endpointsSetI := range endpointsSet.List() {
 		endpoints := endpointsSetI.(map[string]interface{})
-		for _, serviceKey := range conns.ServiceKeys() {
-			config.Endpoints[serviceKey] = endpoints[serviceKey].(string)
+
+		for _, hclKey := range conns.HCLKeys() {
+			var serviceKey string
+			var err error
+			if serviceKey, err = conns.ServiceForHCLKey(hclKey); err != nil {
+				return nil, fmt.Errorf("failed to assign endpoint (%s): %w", hclKey, err)
+			}
+
+			if config.Endpoints[serviceKey] == "" && endpoints[hclKey].(string) != "" {
+				config.Endpoints[serviceKey] = endpoints[hclKey].(string)
+			}
 		}
 	}
 
@@ -1909,7 +1924,7 @@ func assumeRoleSchema() *schema.Schema {
 func endpointsSchema() *schema.Schema {
 	endpointsAttributes := make(map[string]*schema.Schema)
 
-	for _, serviceKey := range conns.ServiceKeys() {
+	for _, serviceKey := range conns.HCLKeys() {
 		endpointsAttributes[serviceKey] = &schema.Schema{
 			Type:        schema.TypeString,
 			Optional:    true,

@@ -43,7 +43,20 @@ If multiple, different Terraform AWS Provider configurations are required, see t
 
 ## Available Endpoint Customizations
 
-The Terraform AWS Provider allows the following endpoints to be customized. **Note:** The Provider allows some service endpoints to be customized before supporting those services.
+The Terraform AWS Provider allows the following endpoints to be customized.
+
+**Note:** The Provider allows some service endpoints to be customized despite not supporting those services.
+
+**Note:** For backward compatibility, some endpoints can be assigned using multiple service "keys" (_e.g._, `dms`, `databasemigration`, or `databasemigrationservice`). If you use more than one equivalent service key in your configuration, the provider will use the _first_ endpoint value set. For example, in the configuration below we have set the DMS service endpoints using both `dms` and `databasemigration`. The provider will set the endpoint to whichever appears first. Subsequent values are ignored.
+
+```terraform
+provider "aws" {
+  endpoints {
+    dms               = "http://this.value.will.be.used.com"
+    databasemigration = "http://this.value.will.be.ignored.com"
+  }
+}
+```
 
 <!-- markdownlint-disable MD033 -->
 <!--
@@ -61,7 +74,6 @@ The Terraform AWS Provider allows the following endpoints to be customized. **No
   <li><code>amplify</code></li>
   <li><code>amplifybackend</code></li>
   <li><code>apigateway</code></li>
-  <li><code>apigatewaymanagement</code> (or <code>apigatewaymanagementapi</code>)</li>
   <li><code>apigatewayv2</code></li>
   <li><code>appautoscaling</code> (or <code>applicationautoscaling</code>)</li>
   <li><code>appconfig</code></li>
@@ -113,14 +125,12 @@ The Terraform AWS Provider allows the following endpoints to be customized. **No
   <li><code>cognitosync</code></li>
   <li><code>comprehend</code></li>
   <li><code>comprehendmedical</code></li>
-  <li><code>computeoptimizer</code></li>
   <li><code>configservice</code> (or <code>config</code>)</li>
   <li><code>connect</code></li>
   <li><code>connectcontactlens</code></li>
   <li><code>connectparticipant</code></li>
   <li><code>costexplorer</code></li>
   <li><code>cur</code> (or <code>costandusagereportservice</code>)</li>
-  <li><code>customerprofiles</code></li>
   <li><code>dataexchange</code></li>
   <li><code>datapipeline</code></li>
   <li><code>datasync</code></li>
@@ -190,7 +200,6 @@ The Terraform AWS Provider allows the following endpoints to be customized. **No
   <li><code>iotsitewise</code></li>
   <li><code>iotthingsgraph</code></li>
   <li><code>iotwireless</code></li>
-  <li><code>ivs</code></li>
   <li><code>kafka</code></li>
   <li><code>kendra</code></li>
   <li><code>kinesis</code></li>
